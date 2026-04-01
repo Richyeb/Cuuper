@@ -1,0 +1,181 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with specific roles and department affiliation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "AREA_OFFICER", "COOPERATIVE_REP"] },
+        "departmentId": { "type": "string" },
+        "phoneNumber": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "State Department of Cooperatives.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "stateName": { "type": "string" },
+        "directorName": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "activeCooperatives": { "type": "number" }
+      },
+      "required": ["id", "stateName", "directorName"]
+    },
+    "Cooperative": {
+      "title": "Cooperative",
+      "description": "Registered cooperative society.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "regNumber": { "type": "string" },
+        "type": { "type": "string", "enum": ["Agricultural", "Thrift & Loans", "Consumer", "Multi-Purpose", "Artisan"] },
+        "representativeName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "lga": { "type": "string" },
+        "membershipSize": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "VERIFIED", "CERTIFIED", "REVOKED"] },
+        "onboardedBy": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "memberListUrl": { "type": "string" },
+        "minuteReportsUrl": { "type": "string" },
+        "requestLetterUrl": { "type": "string" },
+        "physicalAddress": { "type": "string" }
+      },
+      "required": ["id", "name", "regNumber", "type", "status", "departmentId"]
+    },
+    "Verification": {
+      "title": "Verification",
+      "description": "Physical and member verification record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cooperativeId": { "type": "string" },
+        "officerId": { "type": "string" },
+        "physicalSpaceConfirmed": { "type": "boolean" },
+        "membersConfirmed": { "type": "boolean" },
+        "notes": { "type": "string" },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "cooperativeId", "officerId", "verifiedAt"]
+    },
+    "TrainingMaterial": {
+      "title": "TrainingMaterial",
+      "description": "Educational resources for cooperatives.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["PDF", "WORD", "YOUTUBE"] },
+        "url": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "type", "url", "uploadedBy"]
+    },
+    "EventAttendance": {
+      "title": "EventAttendance",
+      "description": "Officer attendance at cooperative events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cooperativeId": { "type": "string" },
+        "officerId": { "type": "string" },
+        "eventType": { "type": "string", "enum": ["AGM", "ELECTION", "INAUGURATION"] },
+        "eventDate": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" },
+        "attendedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "cooperativeId", "officerId", "eventType", "eventDate"]
+    },
+    "FinancialReport": {
+      "title": "FinancialReport",
+      "description": "Yearly financial statements of a cooperative.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cooperativeId": { "type": "string" },
+        "year": { "type": "number" },
+        "reportUrl": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "cooperativeId", "year", "reportUrl", "uploadedBy"]
+    },
+    "TaxRecord": {
+      "title": "TaxRecord",
+      "description": "Regulatory payment record for a cooperative.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cooperativeId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["ANNUAL_LEVY", "REGISTRATION_FEE", "SPECIAL_ASSESSMENT"] },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["PAID", "PENDING", "OVERDUE"] }
+      },
+      "required": ["id", "cooperativeId", "amount", "type", "status"]
+    },
+    "Broadcast": {
+      "title": "Broadcast",
+      "description": "Official communication sent to cooperatives.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "targetType": { "type": "string" },
+        "sentBy": { "type": "string" },
+        "sentAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "content", "sentBy", "sentAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and roles."
+    },
+    "/departments/{deptId}": {
+      "schema": "Department",
+      "description": "State departments."
+    },
+    "/cooperatives/{coopId}": {
+      "schema": "Cooperative",
+      "description": "Registered cooperatives."
+    },
+    "/tax_records/{taxId}": {
+      "schema": "TaxRecord",
+      "description": "Tax and fee records."
+    },
+    "/broadcasts/{broadcastId}": {
+      "schema": "Broadcast",
+      "description": "Sent broadcasts."
+    },
+    "/verifications/{verificationId}": {
+      "schema": "Verification",
+      "description": "Verification records."
+    },
+    "/training_materials/{materialId}": {
+      "schema": "TrainingMaterial",
+      "description": "Training resources."
+    },
+    "/event_attendance/{attendanceId}": {
+      "schema": "EventAttendance",
+      "description": "Event attendance records."
+    },
+    "/financial_reports/{reportId}": {
+      "schema": "FinancialReport",
+      "description": "Yearly financial reports."
+    }
+  }
+}

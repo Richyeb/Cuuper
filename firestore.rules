@@ -1,0 +1,240 @@
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: userId (matches Firebase Auth UID)
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - email: string (required, email format)
+//   - role: string (required, enum: SUPER_ADMIN, DIRECTOR, ADMIN, AREA_OFFICER, COOPERATIVE_REP)
+//   - departmentId: string (optional)
+//   - phoneNumber: string (optional)
+//
+// Collection: departments
+// Document ID: deptId
+// Fields:
+//   - id: string (required)
+//   - stateName: string (required)
+//   - directorName: string (required)
+//   - address: string (required)
+//   - createdAt: timestamp (required)
+//   - activeCooperatives: number (required)
+//
+// Collection: cooperatives
+// Document ID: coopId
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - regNumber: string (required)
+//   - type: string (required, enum)
+//   - representativeName: string (required)
+//   - email: string (required, email format)
+//   - phone: string (required)
+//   - lga: string (required)
+//   - membershipSize: number (required)
+//   - status: string (required, enum: PENDING, CERTIFIED, REVOKED)
+//   - onboardedBy: string (required, user UID)
+//   - departmentId: string (required)
+//   - createdAt: timestamp (required)
+//
+// Collection: tax_records
+// Document ID: taxId
+// Fields:
+//   - id: string (required)
+//   - cooperativeId: string (required)
+//   - amount: number (required)
+//   - type: string (required, enum)
+//   - dueDate: timestamp (required)
+//   - status: string (required, enum)
+//
+// Collection: broadcasts
+// Document ID: broadcastId
+// Fields:
+//   - id: string (required)
+//   - title: string (required)
+//   - content: string (required)
+//   - targetType: string (optional)
+//   - sentBy: string (required, user UID)
+//   - sentAt: timestamp (required)
+//
+// Collection: verifications
+// Document ID: verificationId
+// Fields:
+//   - id: string (required)
+//   - cooperativeId: string (required)
+//   - officerId: string (required)
+//   - physicalSpaceConfirmed: bool (required)
+//   - membersConfirmed: bool (required)
+//   - notes: string
+//   - verifiedAt: timestamp (required)
+//
+// Collection: training_materials
+// Document ID: materialId
+// Fields:
+//   - id: string (required)
+//   - title: string (required)
+//   - type: string (required, enum: PDF, WORD, YOUTUBE)
+//   - url: string (required)
+//   - uploadedBy: string (required)
+//   - createdAt: timestamp (required)
+//
+// Collection: event_attendance
+// Document ID: attendanceId
+// Fields:
+//   - id: string (required)
+//   - cooperativeId: string (required)
+//   - officerId: string (required)
+//   - eventType: string (required, enum: AGM, ELECTION, INAUGURATION)
+//   - eventDate: timestamp (required)
+//   - notes: string
+//   - attendedAt: timestamp (required)
+//
+// Collection: financial_reports
+// Document ID: reportId
+// Fields:
+//   - id: string (required)
+//   - cooperativeId: string (required)
+//   - year: number (required)
+//   - reportUrl: string (required)
+//   - uploadedBy: string (required)
+//   - createdAt: timestamp (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDirector() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'DIRECTOR' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPER_ADMIN' ||
+         (request.auth.token.email == "richyebrizy@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPER_ADMIN' ||
+         (request.auth.token.email == "richyebrizy@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPER_ADMIN' ||
+         (request.auth.token.email == "richyebrizy@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isAreaOfficer() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'AREA_OFFICER';
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.id is string && data.id.size() > 0 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['SUPER_ADMIN', 'DIRECTOR', 'ADMIN', 'AREA_OFFICER', 'COOPERATIVE_REP'];
+    }
+
+    function isValidCooperative(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.regNumber is string && data.regNumber.size() > 0 &&
+             data.type in ['Agricultural', 'Thrift & Loans', 'Consumer', 'Multi-Purpose', 'Artisan'] &&
+             data.status in ['PENDING', 'VERIFIED', 'CERTIFIED', 'REVOKED'] &&
+             data.departmentId is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) || isSuperAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) || isSuperAdmin()) &&
+                    (request.resource.data.role == resource.data.role || isSuperAdmin());
+    }
+
+    match /departments/{deptId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /cooperatives/{coopId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidCooperative(request.resource.data);
+      allow update: if isAuthenticated() && isValidCooperative(request.resource.data) && 
+                    (isDirector() || request.auth.uid == resource.data.onboardedBy);
+      allow delete: if isAdmin();
+    }
+
+    match /tax_records/{taxId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /broadcasts/{broadcastId} {
+      allow read: if isAuthenticated();
+      allow create: if isDirector();
+      allow delete: if isDirector();
+    }
+
+    match /verifications/{verificationId} {
+      allow read: if isDirector() || (isAreaOfficer() && request.auth.uid == resource.data.officerId);
+      allow create: if isAreaOfficer();
+      allow update: if isAreaOfficer() && request.auth.uid == resource.data.officerId;
+    }
+
+    match /training_materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow create: if isAreaOfficer() || isDirector();
+      allow delete: if isDirector() || (isAreaOfficer() && request.auth.uid == resource.data.uploadedBy);
+    }
+
+    match /event_attendance/{attendanceId} {
+      allow read: if isDirector() || (isAreaOfficer() && request.auth.uid == resource.data.officerId);
+      allow create: if isAreaOfficer();
+    }
+
+    match /financial_reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAreaOfficer() || isDirector();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
